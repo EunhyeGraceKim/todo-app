@@ -33,13 +33,12 @@ MongoClient.connect('mongodb+srv://admin:1q2w3e4r@cluster0.njheh.mongodb.net/tod
     });
 })
 
-
 app.get('/',function(req, res){
-    res.sendFile(__dirname+'/views/index.ejs');
+    res.render('index.ejs');
 });
 
 app.get('/write',function(req, res){
-    res.sendFile(__dirname+'/views/write.ejs');
+    res.render('write.ejs');
 });
 
 //body-parser lib설치하고 form으로 보낸 내용들 DB에 저장하기 
@@ -107,52 +106,52 @@ app.put('/edit',function(req,res){
     })
 })
 
-//const passport = require('passport');
-//const LocalStrategy = require('passport-local').Strategy;
-//const session = require('express-session');
+const passport = require('passport');
+const LocalStrategy = require('passport-local').Strategy;
+const session = require('express-session');
 
-//app.use(session({secret:'secretNum', resave:true, saveUninitialized:false}));
-//app.use(passport.initialize());
-//app.use(passport.session());
+app.use(session({secret:'secretNum', resave:true, saveUninitialized:false}));
+app.use(passport.initialize());
+app.use(passport.session());
 
-// app.get('/login', function(req,res){
-//     res.render('login.ejs');       
-// });
+app.get('/login', function(req,res){
+    res.render('login.ejs');       
+});
 
-// app.post('/login', passport.authenticate('local', {
-//     failureRedirect : '/fail' //회원인증 실패시 fail경로감
-// }), function(req,res){
-//      res.redirect('/');       
-// });
+app.post('/login', passport.authenticate('local', {
+    failureRedirect : '/fail' //회원인증 실패시 fail경로감
+}), function(req,res){
+     res.redirect('/');       
+});
 
-// app.get('/fail', function(req,res){
-//     alert('login fail');
-// })
+app.get('/fail', function(req,res){
+    alert('login fail');
+})
 
-// //인증하는 방법은 Strategy라고 함
-// passport.use(new LocalStrategy({
-//     usernameField: 'id',
-//     passwordField: 'pw',
-//     session: true,
-//     passReqToCallback: false, //true로 변환시 func파라미터에 req값 넣어서 비교가능
-//   }, function (입력한아이디, 입력한비번, done) {
-//     //console.log(입력한아이디, 입력한비번);
-//     db.collection('login').findOne({ id: 입력한아이디 }, function (에러, 결과) {
-//       if (에러) return done(에러) 
-//                         //done(서버에러,성공시사용자DB데이터,에러메세지)
-//       if (!결과) return done(null, false, { message: '존재하지않는 아이디요' })
-//       if (입력한비번 == 결과.pw) {
-//         return done(null, 결과)
-//       } else {
-//         return done(null, false, { message: '비번틀렸어요' })
-//       }
-//     })
-//   })
-// );
+//인증하는 방법은 Strategy라고 함
+passport.use(new LocalStrategy({
+    usernameField: 'id',
+    passwordField: 'pw',
+    session: true,
+    passReqToCallback: false, //true로 변환시 func파라미터에 req값 넣어서 비교가능
+  }, function (입력한아이디, 입력한비번, done) {
+    //console.log(입력한아이디, 입력한비번);
+    db.collection('login').findOne({ id: 입력한아이디 }, function (에러, 결과) {
+      if (에러) return done(에러) 
+                        //done(서버에러,성공시사용자DB데이터,에러메세지)
+      if (!결과) return done(null, false, { message: '존재하지않는 아이디요' })
+      if (입력한비번 == 결과.pw) {
+        return done(null, 결과)
+      } else {
+        return done(null, false, { message: '비번틀렸어요' })
+      }
+    })
+  })
+);
 
-// passport.serializeUser(function(user,done){
-//     done(null, user.id);
-// })
-// passport.deserializeUser(function(id, done){
-//     done(null,{});
-// })
+passport.serializeUser(function(user,done){
+    done(null, user.id);
+})
+passport.deserializeUser(function(id, done){
+    done(null,{});
+})
