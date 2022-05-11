@@ -109,6 +109,7 @@ app.put('/edit',function(req,res){
 const passport = require('passport');
 const LocalStrategy = require('passport-local').Strategy;
 const session = require('express-session');
+const res = require('express/lib/response');
 
 app.use(session({secret:'secretNum', resave:true, saveUninitialized:false}));
 app.use(passport.initialize());
@@ -125,8 +126,24 @@ app.post('/login', passport.authenticate('local', {
 });
 
 app.get('/fail', function(req,res){
-    alert('login fail');
-})
+    console.log('login fail');
+    res.send('login fail');
+});
+
+app.get('/mypage', checkLogin, function(req,res){
+    //login한 사람만 가능 - checkLogin 미들웨어사용
+    console.log("===="+req.user);
+    res.render('mypage.ejs',{userName:req.user});
+});
+
+//미들웨어 - 로그인 후 세션이 있으면 req.user가 항상 있음
+function checkLogin(req, res, next){
+    if(req.user){
+        next();
+    }else{
+        res.send('로그인 안하셨는데요?');
+    }
+}
 
 //인증하는 방법은 Strategy라고 함
 passport.use(new LocalStrategy({
@@ -136,12 +153,13 @@ passport.use(new LocalStrategy({
     passReqToCallback: false, //true로 변환시 func파라미터에 req값 넣어서 비교가능
   }, function (입력한아이디, 입력한비번, done) {
     //console.log(입력한아이디, 입력한비번);
-    db.collection('login').findOne({ id: 입력한아이디 }, function (에러, 결과) {
-      if (에러) return done(에러) 
-                        //done(서버에러,성공시사용자DB데이터,에러메세지)
-      if (!결과) return done(null, false, { message: '존재하지않는 아이디요' })
-      if (입력한비번 == 결과.pw) {
-        return done(null, 결과)
+    db.collection('login').findOne({ id: 입력한아이디 }, function (err, result) {
+      if (err) return done(err) 
+      
+      //return done(서버에러,성공시사용자DB데이터,에러메세지)
+      if (!result) return done(null, false, { message: '존재하지않는 아이디요' })
+      if (입력한비번 == result.pw) {
+        return done(null, result)
       } else {
         return done(null, false, { message: '비번틀렸어요' })
       }
@@ -152,6 +170,12 @@ passport.use(new LocalStrategy({
 passport.serializeUser(function(user,done){
     done(null, user.id);
 })
-passport.deserializeUser(function(id, done){
-    done(null,{});
+
+//세션을 찾을 때 실행되는 함수 
+passport.deserializeUser(function(아이디, done){
+    //DB에서 위의 user.id로 사용자를 찾은 뒤에 사용자 정보를 {result}안에 넣음
+    db.collection('login').findOne({id :아이디},function(err,result){
+        done(null, result); //세션정보에 따라 id,pw알 수 있음 (mypage에서 req.user에 저장)
+    })
 })
+ 
