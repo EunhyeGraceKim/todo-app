@@ -41,27 +41,6 @@ app.get('/write',function(req, res){
     res.render('write.ejs');
 });
 
-//body-parser lib설치하고 form으로 보낸 내용들 DB에 저장하기 
-app.post('/add', function(req, res){
-    res.send('complete!');
-    //counter라는 이름을가진 file을 찾을 거다
-    db.collection('counter').findOne({name:'postCount'}, function(error, result){
-        console.log(result.totalPost);
-        let sTotalPost = result.totalPost;
-
-        //console.log(req.body.date);
-        db.collection('post').insertOne({_id : sTotalPost+1, title : req.body.title, date : req.body.date}, function(error,result){
-            console.log('저장완료');
-
-            //.updateOne({어떤 데이터를 수정할지}{수정값},function(){})
-            //update함수를 쓸 때는 operator를 써야함. (operater : $set,$inc,$rename...)
-            db.collection('counter').updateOne({name:'postCount'},{ $inc : {totalPost:1} },function(error,result){
-                if(error) return console.log(error);
-            });
-        });
-    }); 
-});
-
 app.get('/list', function(req, res){
     
     //디비에 저장된 post라는 collection안의 모든 데이터를 꺼내주세요
@@ -73,15 +52,6 @@ app.get('/list', function(req, res){
  
 })
 
-
-app.delete('/delete',function(req,res){
-    console.log(req.body);
-    req.body._id = parseInt(req.body._id); 
-    db.collection('post').deleteOne(req.body, function(error,result){
-        console.log('삭제완료');
-        res.status(200).send({message : 'success!'});
-    });
-})
 
 //parameter로 요청가능한 url만들기 
 app.get('/detail/:id',function(req,res){
@@ -110,6 +80,7 @@ const passport = require('passport');
 const LocalStrategy = require('passport-local').Strategy;
 const session = require('express-session');
 const res = require('express/lib/response');
+const req = require('express/lib/request');
 
 app.use(session({secret:'secretNum', resave:true, saveUninitialized:false}));
 app.use(passport.initialize());
@@ -179,3 +150,93 @@ passport.deserializeUser(function(아이디, done){
     })
 })
  
+app.get('/search', function(req,res){
+
+    console.log(`==> ${typeof(req.query)}, ${JSON.stringify(req.query)}`)
+    db.collection('post').aggregate(
+        [
+            {$match: { title: { $regex: req.query.value }}}
+        ]
+    ).toArray((err,result)=>{
+        if (err) { 
+            console.log('err!!', err);
+        }
+        //console.log(`result: ${JSON.stringify(result)}, length: ${result.length}`);
+        res.render('search.ejs',{posts:result}); 
+    })
+});
+
+//db.getCollection("post").find({})
+//db.getCollection("post").find({title: {$regex: '카페'}}).sort({date: -1})
+
+app.post('/register', function(req,res){
+    db.collection('login').insertOne({id:req.body.id, pw:req.body.pw} ,function(err,result){
+        res.redirect('/');
+    })
+});
+
+//body-parser lib설치하고 form으로 보낸 내용들 DB에 저장하기 
+app.post('/add', function(req, res){
+    res.send('complete!');
+    //counter라는 이름을가진 file을 찾을 거다
+    db.collection('counter').findOne({name:'postCount'}, function(error, result){
+        console.log(result.totalPost);
+        let sTotalPost = result.totalPost;
+        let objUpdateData = {_id:sTotalPost+1, writer:req.user._id, title:req.body.title, date:req.body.date};
+        //console.log(req.body.date);
+        db.collection('post').insertOne(objUpdateData, function(error,result){
+            console.log('저장완료');
+
+            //.updateOne({어떤 데이터를 수정할지}{수정값},function(){})
+            //update함수를 쓸 때는 operator를 써야함. (operater : $set,$inc,$rename...)
+            db.collection('counter').updateOne({name:'postCount'},{ $inc : {totalPost:1} },function(error,result){
+                if(error) return console.log(error);
+            });
+        });
+    }); 
+});
+
+app.delete('/delete',function(req,res){
+    console.log(req.body);
+    req.body._id = parseInt(req.body._id); 
+    let objDeleteData = {_id:req.body._id, writer:req.user._id};
+    db.collection('post').deleteOne(objDeleteData, function(error,result){
+        console.log('삭제완료');
+        if(err) {
+            console.log(err);
+        }
+        res.status(200).send({message : 'success!'});
+    });
+})
+
+//app.use(미들웨어) - 요청과 응답사이에 실행되는 코드 
+app.use('/shop', require('./routes/shop.js'));
+
+app.get('/upload', function(req,res){
+    res.render('upload.ejs');
+})
+
+//== file image == 
+let multer = require('multer'); //image하드에 저장
+
+var storage = multer.diskStorage({ //memoryStorage는 램에 저장(휘발성)
+    destination : function(req,file,cb){
+        cb(null, './public/image');
+    },
+    filename : function(req,file,cb){
+        cb(null, file.originalname); //저장한 이미지의 파일명 설정 (+new Date())
+    },
+    filefilter : function(req, file, cb){
+
+    }
+});
+
+var upload = multer({storage:storage});
+app.post('/upload', upload.single('profile'), function(req,res){
+    res.send('upload success!')
+});
+
+//업로드 페이지 보여주기
+app.get('/image/:imageName', function(req,res){
+    res.sendFile(__dirname+'/public/image/'+ req.params.imageName); //http://localhost:8080/image/testPic.png
+});

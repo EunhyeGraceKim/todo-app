@@ -22,35 +22,22 @@
     <title>Hello, world!</title>
   </head>
   <body>
-     <!--nav.html 첨부-->
-     <%- include('nav.html') %>
+    <!--nav.html 첨부-->
+    <%- include('nav.html') %>
 
     <div class="box-container">
-        <form action="/login" method="post">
-            <p class="forText">id</p>
-            <input type="text" name="id" class="form-control" placeholder="" aria-label="todo" aria-describedby="basic-addon1">
+        <p class="forText">업로드페이지</p>
+        <form action="/upload" method="post" enctype="multipart/form-data">
+          
+            <input type="file" name="profile">
         
-            <p class="forText">pw</p>
-            <input type="text" name="pw" class="form-control" placeholder="" aria-label="dueDate" aria-describedby="basic-addon1">
+            <p class="forText">Due date</p>
+            <input type="text" name="date" class="form-control" placeholder="" aria-label="dueDate" aria-describedby="basic-addon1">
 
             <input class="btn btn-danger" type="submit" value="Submit" style="margin-top: 20px;">
         </form>  
     </div>
 
-    <div class="box-container">
-      <label style="font-weight: bold">회원가입</label>
-      <form action="/register" method="POST">
-        <div class="form-group">
-          <label>아이디</label>
-          <input type="text" class="form-control" name="id">
-        </div>
-        <div class="form-group">
-          <label>비번</label>
-          <input type="password" class="form-control" name="pw">
-        </div>
-        <button type="submit" class="btn btn-danger">가입</button>
-        </form>
-     </div>
     <!-- Optional JavaScript -->
     <!-- jQuery first, then Popper.js, then Bootstrap JS -->
     <script src="https://code.jquery.com/jquery-3.4.1.slim.min.js" integrity="sha384-J6qa4849blE2+poT4WnyKhv5vZF5SrPo0iEjwBvKU7imGFAV0wwj1yYfoRSJoZ+n" crossorigin="anonymous"></script>
