@@ -31,7 +31,8 @@
             <h6>할일 제목 : <%= posts[i].title %> <h6>
             <p>할일 마감날짜 : <%= posts[i].date %></p>
             <button class="btn btn-danger delete" data-id="<%= posts[i]._id %>">삭제</button>
-        </li>
+            <button class="btn btn-secondary chat" data-id="<%= posts[i].writer %>">채팅하기</button>
+          </li>
       <% } %>
     </ul>
     </div>
@@ -55,11 +56,21 @@
           data : {_id : postNum }
         }).done(()=>{
             console.log('ajax 성공!');
-            $(this).parent().hide();
+           // $(this).parent().hide();
         }).fail(function(xhr, textStatus, errorThrown){
             console.log(xhr, textStatus, errorThrown);
         });
       });
+
+      //채팅방 게시물 작성
+      $('.chat').click(function(e){
+        let id = e.target.dataset.id;
+        $.post('/chatroom',{writerId : id}).then(()=>{
+            console.log('채팅방 게시물 생성 완료!')
+        })
+      });
+
+
     </script>
 
     <!-- Optional JavaScript -->

@@ -1,0 +1,57 @@
+<!doctype html>
+
+<html>
+  <head>
+    <!-- Required meta tags -->
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+
+    <!-- Bootstrap CSS -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@4.4.1/dist/css/bootstrap.min.css" integrity="sha384-Vkoo8x4CGsO3+Hhxv8T/Q5PaXtkKtu6ug5TOeNV6gBiFeWPGFN9MuhOf23Q9Ifjh" crossorigin="anonymous">
+
+    <title>Hello, world!</title>
+  </head>
+  <body>
+    <!--nav.html 첨부-->
+    <%- include('nav.html') %>
+
+    <div class="container input-group mb-3" style="padding: 20px 0 0 0">
+        <button class="input-group-append btn btn-secondary" id="room1" style="margin-right:20px">채팅방1 입장</button>
+        <button class="input-group-append btn btn-secondary" id="room1-send">채팅방1에서 메세지 보내기</button>
+    </div>
+
+    <div class="container input-group mb-3" style="padding: 20px 0 0 0">
+        <div id="messageContent" class="container input-group mb-3" style="padding: 20px 0 0 0"> </div>
+    
+        <input class="form-control" id="message" placeholder="채팅방" >
+        <button class="input-group-append btn btn-danger" id="send">서버에 메세지 보내기</button>
+    </div>
+    
+    <!-- Optional JavaScript -->
+    <!-- jQuery first, then Popper.js, then Bootstrap JS -->
+    <script src="https://code.jquery.com/jquery-3.4.1.min.js"></script>
+    <script src="https://cdn.socket.io/4.5.0/socket.io.min.js" integrity="sha384-7EyYLQZgWBi67fBtVxw60/OWl1kjsfrPFcaU0pp0nAh+i8FD068QogUvg85Ewy1k" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/popper.js@1.16.0/dist/umd/popper.min.js" integrity="sha384-Q6E9RHvbIyZFJoft+2mJbHaEWldlvI9IOYy5n3zV9zzTtmI3UksdQRVvoxMfooAo" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@4.4.1/dist/js/bootstrap.min.js" integrity="sha384-wfSDF2E50Y2D1uUdj0O3uMBJnjuUD4Ih7YwaYd1iqfktj0Uod8GCExl3Og8ifwB6" crossorigin="anonymous"></script>
+    <script>
+        var socket = io();
+
+        $('#room1-send').click(function(){
+            socket.emit('room1-send', '방가 채팅1방 사람들');
+        });
+
+        $('#room1').click(function(){
+            socket.emit('joinroom', '채팅방 입장시켜줘~');
+        });
+
+        $('#send').click(function(){
+            socket.emit('user-send', $('#message').val());
+        });
+
+        socket.on('broadcast', function(data){
+            $('#messageContent').append('<div>'+data+'</div>');
+        })
+    </script>
+
+</body>
+</html>

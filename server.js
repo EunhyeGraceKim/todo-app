@@ -2,6 +2,11 @@ const express = require('express');
 const app = express();
 const bodyParser = require('body-parser');
 const { devNull } = require('os');
+//websoket 
+const http = require('http').createServer(app);
+const { Server } = require('socket.io');
+const io = new Server(http);
+
 app.use(bodyParser.urlencoded({extended:true}));
  
 app.set('view engine', 'ejs');
@@ -22,16 +27,16 @@ MongoClient.connect('mongodb+srv://admin:1q2w3e4r@cluster0.njheh.mongodb.net/tod
     }
     
     db = client.db('todoapp'); //todoapp이라는 db(폴더)에 연결
-
+    //app.db = db;
     // db.collection('post').insertOne({name:'Milkim1', _id : 31}, function(error,result){
     //     console.log('저장완료');
     // });
 
     //listen(서버를 오픈할 포트번호, function(){서버 오픈시 실행할 코드})
-    app.listen(8080, function(){
+    http.listen(8080, function(){
         console.log('listening on 8080');
     });
-})
+});
 
 app.get('/',function(req, res){
     res.render('index.ejs');
@@ -70,7 +75,7 @@ app.get('/edit/:id',function(req,res){
 
 app.put('/edit',function(req,res){
     //form에 담긴 제목데이터, 날짜데이터를 가지고 db.collection에 업데이트함.
-    db.collection('post').updateOne( {_id: parseInt(req.body.id)}, {$set : {title:req.body.title, date:req.body.date}},function(error,result){
+    db.collection('post').updateOne({_id: parseInt(req.body.id)}, {$set : {title:req.body.title, date:req.body.date}},function(error,result){
         console.log('수정완료!');
         res.redirect('/list');
     })
@@ -90,7 +95,7 @@ app.get('/login', function(req,res){
     res.render('login.ejs');       
 });
 
-app.post('/login', passport.authenticate('local', {
+app.post('/login', passport.authenticate('local',{
     failureRedirect : '/fail' //회원인증 실패시 fail경로감
 }), function(req,res){
      res.redirect('/');       
@@ -122,9 +127,9 @@ passport.use(new LocalStrategy({
     passwordField: 'pw',
     session: true,
     passReqToCallback: false, //true로 변환시 func파라미터에 req값 넣어서 비교가능
-  }, function (입력한아이디, 입력한비번, done) {
+  }, function (입력한아이디, 입력한비번, done){
     //console.log(입력한아이디, 입력한비번);
-    db.collection('login').findOne({ id: 입력한아이디 }, function (err, result) {
+    db.collection('login').findOne({ id: 입력한아이디 }, function (err, result){
       if (err) return done(err) 
       
       //return done(서버에러,성공시사용자DB데이터,에러메세지)
@@ -177,7 +182,7 @@ app.post('/register', function(req,res){
 
 //body-parser lib설치하고 form으로 보낸 내용들 DB에 저장하기 
 app.post('/add', function(req, res){
-    res.send('complete!');
+    res.send('completed!');
     //counter라는 이름을가진 file을 찾을 거다
     db.collection('counter').findOne({name:'postCount'}, function(error, result){
         console.log(result.totalPost);
@@ -239,4 +244,89 @@ app.post('/upload', upload.single('profile'), function(req,res){
 //업로드 페이지 보여주기
 app.get('/image/:imageName', function(req,res){
     res.sendFile(__dirname+'/public/image/'+ req.params.imageName); //http://localhost:8080/image/testPic.png
+});
+ 
+
+const {ObjectId} = require('mongodb');
+app.get('/chat', checkLogin, function(req,res){
+    db.collection('chatroom').find({member:req.user._id}).toArray().then((result)=>{
+        res.render('chat.ejs', {data:result});
+    })
+});
+
+app.post('/chatroom', checkLogin, function(req,res){
+    console.log('==req.body.writerId :'+JSON.stringify(req.body));
+    var saveData ={
+        title : 'testChatroom',
+        member : [ObjectId(req.body.writerId), req.user._id],
+        date : new Date()
+    }
+    db.collection('chatroom').insertOne(saveData).then((result)=>{
+        res.send('save success!');
+    });
+});
+
+app.post('/message', checkLogin, function(req,res){
+    var saveData = {
+        parent : req.body.parent,
+        userid : req.user._id,
+        content : req.body.content,
+        date : new Date(),
+    }
+    db.collection('message').insertOne(saveData).then((result)=>{
+        res.send(result);
+    });
+});
+
+app.get('/message/:id', checkLogin, function(req,res){
+    res.writeHead(200,{
+        "Connection" : "keep-alive",
+        "Content-Type" : "text/event-stream; charset=utf-8",
+        "Cache-Control" : "no-cache",
+    });
+
+    db.collection('message').find({parent:req.params.id}).toArray()
+    .then((result)=>{
+        res.write('event: test \n');
+        // \n\n이 이벤트 스트림에 끝이라고 알려주는 방법
+        res.write(`data : ${JSON.stringify(result)} \n\n`);
+    });
+
+    const pipeline = [
+        {$match:{ 'fullDocument.parent' : req.params.id }}
+    ];
+    const collection = db.collection('message');
+    const changeStream = collection.watch(pipeline);
+    changeStream.on('change',(result)=>{
+        console.log(result.fullDocument);
+        res.write('event: test \n');
+        res.write(`data : ${JSON.stringify([result.fullDocument])} \n\n`);
+
+    })
+});
+
+//WebSocket
+app.get('/socket',function(req, res){
+    res.render('socket.ejs');
+});
+
+io.on('connection', function(socket){
+    console.log('유저 접속됨');
+
+    //채팅방 만들기
+    socket.on('room1-send',function(data){
+        io.to('room1').emit('broadcast',data);
+    });
+
+    socket.on('joinroom',function(data){
+        socket.join('room1');
+    });
+
+    //서버 수신하는 코드 작성
+    socket.on('user-send',function(data){
+        //서버->유저 메세지 전송은 io.emit()
+        //메세지 수신은 언제나 socket.on()
+        //io.to(socket.id).emit('broadcast',data);
+        io.emit('broadcast',data);
+    });
 });
